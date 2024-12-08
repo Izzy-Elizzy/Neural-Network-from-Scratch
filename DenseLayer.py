@@ -14,15 +14,37 @@ class Layer_Dense:
         self.output = np.dot(inputs, self.weights) + self.biases
         self.inputs = inputs
 
+    def backward(self, dvalues):
+        self.dweights = np.dot(self.inputs.T, dvalues)
+        self.dbiases = np.sum(dvalues, axis=0, keepdims=True)
+        self.dinputs = np.dot(dvalues, self.weights.T)
+
 class Activation_ReLU:
     def forward(self, inputs):
+        self.inputs = inputs
         self.output = np.maximum(0, inputs)
+        
+    
+    def backward(self, dvalues):
+        self.dinputs = dvalues.copy()
+        self.dinputs[self.inputs <= 0] = 0
 
 class Activation_Softmax:
     def forward(self, inputs):
+        self.inputs = inputs
         exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
         probabilites = exp_values / np.sum(inputs, axis=1, keepdims=True)
         self.output = probabilites
+
+    def backward(self, dvalues):
+        self.dinputs = np.empty_like(dvalues)
+
+        for index, (single_output, single_dvalues) in enumerate(zip(self.output, dvalues)):
+            single_output = single_output.reshape(-1,1)
+
+            jacobian_matrix = np.diagflat(single_output) - np.dot(single_output, single_output.T)
+
+            self.dinputs[index] = np.dot(jacobian_matrix, single_dvalues)
 
 class Loss:
     def calculate(self, output, y):
@@ -42,8 +64,48 @@ class Loss_CategoricalCrossEntropy(Loss):
             correct_confidences = np.sum(y_pred_clipped * y_true, axis=1)
             
         negative_log_likelihoods = -np.log(correct_confidences)
-        return negative_log_likelihoods
+        return 
     
+    def backward(self, dvalues, y_true): 
+        # Number of samples 
+        samples = len(dvalues) 
+        # Number of labels in every sample 
+        # We'll use the first sample to count them 
+        labels = len(dvalues[0]) 
+        # If labels are sparse, turn them into one-hot vector 
+        if len(y_true.shape) == 1: 
+            y_true = np.eye(labels)[y_true] 
+        # Calculate gradient 
+        self.dinputs = -y_true / dvalues 
+        # Normalize gradient 
+        self.dinputs = self.dinputs / samples 
+    
+class Activation_Softmax_Loss_CategoricalCrossentropy(): 
+# Creates activation and loss function objects 
+    def __init__(self): 
+        self.activation = Activation_Softmax() 
+        self.loss = Loss_CategoricalCrossEntropy()  
+        # Forward pass 
+    def forward(self, inputs, y_true): 
+    # Output layer's activation function 
+        self.activation.forward(inputs) 
+        # Set the output 
+        self.output = self.activation.output 
+        # Calculate and return loss value 
+        return self.loss.calculate(self.output, y_true)
+    def backward(self, dvalues, y_true): 
+        # Number of samples 
+        samples = len(dvalues) 
+        # If labels are one-hot encoded, 
+        # turn them into discrete values 
+        if len(y_true.shape) == 2: 
+            y_true = np.argmax(y_true, axis=1) 
+        # Copy so we can safely modify 
+        self.dinputs = dvalues.copy() 
+        # Calculate gradient 
+        self.dinputs[range(samples), y_true] -= 1 
+        # Normalize gradient 
+        self.dinputs = self.dinputs / samples
 
 X_train, X_test, y_train, y_test = load_optdigits()
 
