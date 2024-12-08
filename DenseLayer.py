@@ -1,5 +1,5 @@
 import numpy as np
-import math
+from data import load_optdigits
 
 X = [[1,2,3,2.5],
      [2.0, 5.0, -1.0, 2.0],
@@ -22,6 +22,51 @@ class Activation_Softmax:
         exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
         probabilites = exp_values / np.sum(inputs, axis=1, keepdims=True)
         self.output = probabilites
+
+class Loss:
+    def calculate(self, output, y):
+        sample_losses = self.forward(output, y)
+        data_loss = np.mean(sample_losses)
+        return data_loss
+    
+class Loss_CategoricalCrossEntropy(Loss):
+    def forward(self, y_pred, y_true):
+        samples = len(y_pred)
+        y_pred_clipped = np.clip(y_pred, 1e-7, 1-1e-7)
+
+        #Handling for Scalars
+        if len(y_true.shape) == 1:
+            correct_confidences = y_pred_clipped[range(samples), y_true]
+        elif len(y_true.shape) == 2:
+            correct_confidences = np.sum(y_pred_clipped * y_true, axis=1)
+            
+        negative_log_likelihoods = -np.log(correct_confidences)
+        return negative_log_likelihoods
+    
+
+X_train, X_test, y_train, y_test = load_optdigits()
+
+print(X_train[0])
+
+dense1 = Layer_Dense(1024, 32)
+activation1 = Activation_ReLU()
+
+dense2 = Layer_Dense(32, 10)
+activation2 = Activation_Softmax()
+
+dense1.forward(X_train)
+activation1.forward(dense1.output)
+
+dense2.forward(activation1.output)
+activation2.forward(dense2.output)
+
+
+loss_function = Loss_CategoricalCrossEntropy()
+loss = loss_function.calculate(activation2.output, y_train)
+
+
+print(loss)
+
 
 # weights1 = [[0.2, 0.8, -0.5, 1.0],
 #             [0.5, -0.91, 0.26, -0.5],
