@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 X = [[1,2,3,2.5],
      [2.0, 5.0, -1.0, 2.0],
@@ -16,6 +17,11 @@ class Activation_ReLU:
     def forward(self, inputs):
         self.output = np.maximum(0, inputs)
 
+class Activation_Softmax:
+    def forward(self, inputs):
+        exp_values = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))
+        probabilites = exp_values / np.sum(inputs, axis=1, keepdims=True)
+        self.output = probabilites
 
 # weights1 = [[0.2, 0.8, -0.5, 1.0],
 #             [0.5, -0.91, 0.26, -0.5],
