@@ -71,11 +71,3 @@ def load_optdigits(test_size=0.2, random_state=42):
     y_test = y[split_index:]
 
     return X_train, X_test, y_train, y_test
-
-# Example usage
-X_train, X_test, y_train, y_test = load_optdigits()
-
-print("Training data shape:", X_train.shape)
-print("Training labels shape:", y_train.shape)
-print("Test data shape:", X_test.shape)
-print("Test labels shape:", y_test.shape)
